@@ -1,0 +1,301 @@
+From 28aabca3f9d9eb0004302428a16ee15afa757ea5 Mon Sep 17 00:00:00 2001
+From: alk3pInjection <5e147612@kscope.ink>
+Date: Fri, 27 May 2022 01:52:00 +0800
+Subject: [PATCH 2/9] phh-treble: Initial bring-up for KaleidosopeOS
+
+Change-Id: I8e0ef1fbb7299cfdcd28d6a4b3f44aeb6d2387d4
+---
+ Android.bp                                |  2 ++
+ Android.mk                                | 14 +++++++++
+ AndroidProducts.mk                        |  8 ++++++
+ BoardConfig.mk                            | 35 ++++++++++++++++++++++-
+ bluetooth/{ => include}/bdroid_buildcfg.h | 31 ++------------------
+ board-base.mk                             |  9 ------
+ base.mk => device.mk                      | 12 +++-----
+ kscope.dependencies                       |  8 ++++++
+ kscope_treble.mk                          | 29 +++++++++++++++++++
+ rw-system.sh                              |  2 +-
+ system.prop                               |  1 -
+ 11 files changed, 102 insertions(+), 49 deletions(-)
+ create mode 100644 Android.bp
+ create mode 100644 Android.mk
+ create mode 100644 AndroidProducts.mk
+ rename bluetooth/{ => include}/bdroid_buildcfg.h (55%)
+ delete mode 100644 board-base.mk
+ rename base.mk => device.mk (96%)
+ create mode 100644 kscope.dependencies
+ create mode 100644 kscope_treble.mk
+
+diff --git a/Android.bp b/Android.bp
+new file mode 100644
+index 0000000..9515b25
+--- /dev/null
++++ b/Android.bp
+@@ -0,0 +1,2 @@
++soong_namespace {
++}
+diff --git a/Android.mk b/Android.mk
+new file mode 100644
+index 0000000..dc16cfd
+--- /dev/null
++++ b/Android.mk
+@@ -0,0 +1,14 @@
++#
++# Copyright (C) 2022 The KaleidoscopeOS Project
++#
++# SPDX-License-Identifier: Apache-2.0
++#
++
++LOCAL_PATH := $(call my-dir)
++
++ifeq ($(TARGET_DEVICE),treble)
++include $(call all-makefiles-under,$(LOCAL_PATH))
++
++include $(CLEAR_VARS)
++
++endif
+diff --git a/AndroidProducts.mk b/AndroidProducts.mk
+new file mode 100644
+index 0000000..59aa1bc
+--- /dev/null
++++ b/AndroidProducts.mk
+@@ -0,0 +1,8 @@
++#
++# Copyright (C) 2022 The KaleidoscopeOS Project
++#
++# SPDX-License-Identifier: Apache-2.0
++#
++
++PRODUCT_MAKEFILES := \
++    $(LOCAL_DIR)/kscope_treble.mk
+diff --git a/BoardConfig.mk b/BoardConfig.mk
+index 2fddc52..e334cde 100644
+--- a/BoardConfig.mk
++++ b/BoardConfig.mk
+@@ -1,8 +1,41 @@
++#
++# Copyright (C) 2022 The KaleidoscopeOS Project
++#
++# SPDX-License-Identifier: Apache-2.0
++#
++
+ include build/make/target/board/generic_arm64/BoardConfig.mk
+-include device/phh/treble/board-base.mk
+ 
++BUILD_BROKEN_DUP_RULES := true
++BUILD_BROKEN_ELF_PREBUILT_PRODUCT_COPY_FILES := true
++
++DEVICE_PATH := device/phh/treble
++
++# Kernel
++TARGET_NO_KERNEL := true
++
++# Properties
++TARGET_SYSTEM_PROP += $(DEVICE_PATH)/system.prop
++
++# Bluetooth
++BOARD_BLUETOOTH_BDROID_BUILDCFG_INCLUDE_DIR := $(DEVICE_PATH)/bluetooth/include
++
++# HIDL
++DEVICE_FRAMEWORK_MANIFEST_FILE := $(DEVICE_PATH)/framework_manifest.xml
++
++# Partitions
+ ifeq ($(BOARD_SYSTEMIMAGE_PARTITION_RESERVED_SIZE),)
+ BOARD_SYSTEMIMAGE_PARTITION_SIZE := 2147483648
+ else
+ BOARD_SYSTEMIMAGE_PARTITION_RESERVED_SIZE := 33554432
+ endif
++
++# SELinux
++SYSTEM_EXT_PRIVATE_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy
++SELINUX_IGNORE_NEVERALLOWS := true
++
++# Misc
++BOARD_ROOT_EXTRA_FOLDERS += bt_firmware sec_storage efs persist
++BOARD_ROOT_EXTRA_SYMLINKS := $(filter-out $(BOARD_ROOT_EXTRA_SYMLINKS),/mnt/vendor/persist:/persist)
++
++TARGET_EXFAT_DRIVER := exfat
+diff --git a/bluetooth/bdroid_buildcfg.h b/bluetooth/include/bdroid_buildcfg.h
+similarity index 55%
+rename from bluetooth/bdroid_buildcfg.h
+rename to bluetooth/include/bdroid_buildcfg.h
+index 166bd4a..882e38b 100644
+--- a/bluetooth/bdroid_buildcfg.h
++++ b/bluetooth/include/bdroid_buildcfg.h
+@@ -21,34 +21,7 @@
+ #ifndef _BDROID_BUILDCFG_H
+ #define _BDROID_BUILDCFG_H
+ 
+-//#include <cutils/properties.h>
+-#include <string.h>
+-
+-static inline const char* BtmDefLocalName()
+-{
+-#if 0
+-    static char product_device[PROPERTY_VALUE_MAX];
+-    //Huawei-defined property
+-    property_get("ro.config.marketing_name", product_device, "");
+-
+-    if (strcmp(product_device, "") != 0)
+-        return product_device;
+-
+-    // Fallback to ro.product.model
+-    return "";
+-#endif
+-    return "hello";
+-}
+-
+-static inline int BtmBypassExtraAclSetup() {
+-#if 0
+-    int8_t prop = property_get_bool("persist.sys.bt_acl_bypass", false);
+-    return prop == true;
+-#endif
+-    return 1;
+-}
+-
+-#define BTM_DEF_LOCAL_NAME BtmDefLocalName()
+-#define BTM_BYPASS_EXTRA_ACL_SETUP BtmBypassExtraAclSetup()
++#define BTM_DEF_LOCAL_NAME "Kaleidoscope Dream"
++#define BTM_BYPASS_EXTRA_ACL_SETUP 1
+ 
+ #endif
+diff --git a/board-base.mk b/board-base.mk
+deleted file mode 100644
+index 1ddacaf..0000000
+--- a/board-base.mk
++++ /dev/null
+@@ -1,9 +0,0 @@
+-TARGET_SYSTEM_PROP := device/phh/treble/system.prop $(TARGET_SYSTEM_PROP)
+-BOARD_BLUETOOTH_BDROID_BUILDCFG_INCLUDE_DIR := device/phh/treble/bluetooth
+-TARGET_EXFAT_DRIVER := exfat
+-DEVICE_FRAMEWORK_MANIFEST_FILE := device/phh/treble/framework_manifest.xml
+-
+-BOARD_ROOT_EXTRA_FOLDERS += bt_firmware sec_storage efs persist
+-BUILD_BROKEN_ELF_PREBUILT_PRODUCT_COPY_FILES := true
+-
+-BOARD_ROOT_EXTRA_SYMLINKS := $(filter-out $(BOARD_ROOT_EXTRA_SYMLINKS),/mnt/vendor/persist:/persist)
+diff --git a/base.mk b/device.mk
+similarity index 96%
+rename from base.mk
+rename to device.mk
+index 28077ee..1f059ce 100644
+--- a/base.mk
++++ b/device.mk
+@@ -1,3 +1,7 @@
++# Soong namespaces
++PRODUCT_SOONG_NAMESPACES += \
++    $(LOCAL_PATH)
++
+ #Huawei devices don't declare fingerprint and telephony hardware feature
+ #TODO: Proper detection
+ PRODUCT_COPY_FILES := \
+@@ -8,12 +12,9 @@ PRODUCT_COPY_FILES := \
+ 	frameworks/native/data/etc/android.hardware.bluetooth_le.xml:system/etc/permissions/android.hardware.bluetooth_le.xml \
+ 	frameworks/native/data/etc/android.hardware.usb.host.xml:system/etc/permissions/android.hardware.usb.host.xml \
+ 
+-BOARD_PLAT_PRIVATE_SEPOLICY_DIR += device/phh/treble/sepolicy
+ PRODUCT_PACKAGE_OVERLAYS += device/phh/treble/overlay
+ 
+ $(call inherit-product, vendor/hardware_overlay/overlay.mk)
+-$(call inherit-product, $(SRC_TARGET_DIR)/product/core_64_bit.mk)
+-$(call inherit-product, $(SRC_TARGET_DIR)/product/aosp_base_telephony.mk)
+ 
+ #Those overrides are here because Huawei's init read properties
+ #from /system/etc/prop.default, then /vendor/build.prop, then /system/build.prop
+@@ -24,7 +25,6 @@ PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
+ 	ro.build.version.all_codenames=$(PLATFORM_VERSION_ALL_CODENAMES) \
+ 	ro.build.version.release=$(PLATFORM_VERSION) \
+ 	ro.build.version.security_patch=$(PLATFORM_SECURITY_PATCH) \
+-	ro.adb.secure=0 \
+ 	ro.logd.auditd=true
+ 	
+ #Huawei HiSuite (also other OEM custom programs I guess) it's of no use in AOSP builds
+@@ -126,8 +126,6 @@ PRODUCT_COPY_FILES += \
+ 	device/phh/treble/files/moto-liber-gpio-keys.kl:system/phh/moto-liber-gpio-keys.kl \
+ 	device/phh/treble/files/tecno-touchpanel.kl:system/phh/tecno-touchpanel.kl \
+ 
+-SELINUX_IGNORE_NEVERALLOWS := true
+-
+ # Universal NoCutoutOverlay
+ PRODUCT_PACKAGES += \
+     NoCutoutOverlay
+@@ -213,5 +211,3 @@ PRODUCT_PACKAGES += \
+ PRODUCT_COPY_FILES += \
+ 	frameworks/av/services/audiopolicy/config/a2dp_audio_policy_configuration_7_0.xml:system/etc/a2dp_audio_policy_configuration_7_0.xml \
+ 	frameworks/av/services/audiopolicy/config/a2dp_audio_policy_configuration.xml:system/etc/a2dp_audio_policy_configuration.xml \
+-
+-include build/make/target/product/gsi_release.mk
+diff --git a/kscope.dependencies b/kscope.dependencies
+new file mode 100644
+index 0000000..0903576
+--- /dev/null
++++ b/kscope.dependencies
+@@ -0,0 +1,8 @@
++[
++    {
++        "remote":       "github",
++        "repository":   "phhusson/vendor_hardware_overlay",
++        "target_path":  "vendor/hardware_overlay",
++        "branch":       "pie"
++    }
++]
+diff --git a/kscope_treble.mk b/kscope_treble.mk
+new file mode 100644
+index 0000000..2ce98f1
+--- /dev/null
++++ b/kscope_treble.mk
+@@ -0,0 +1,29 @@
++#
++# Copyright (C) 2022 The KaleidoscopeOS Project
++#
++# SPDX-License-Identifier: Apache-2.0
++#
++
++# Inherit from those products. Most specific first.
++$(call inherit-product, $(SRC_TARGET_DIR)/product/aosp_arm64.mk)
++$(call inherit-product, $(SRC_TARGET_DIR)/product/aosp_base_telephony.mk)
++$(call inherit-product, $(SRC_TARGET_DIR)/product/gsi_release.mk)
++
++# Inherit from treble device.
++$(call inherit-product, device/phh/treble/device.mk)
++
++# Inherit some common Kaleidoscope stuff.
++$(call inherit-product, vendor/kscope/target/product/mobile.mk)
++
++# Device identifier. This must come after all inclusions.
++PRODUCT_MANUFACTURER := Google
++PRODUCT_BRAND := google
++PRODUCT_NAME := kscope_treble
++PRODUCT_DEVICE := treble
++PRODUCT_MODEL := Phh-Treble for KaleidoscopeOS
++
++# Overwrite the inherited "emulator" characteristics.
++PRODUCT_CHARACTERISTICS := device
++
++# Boot animation
++TARGET_BOOT_ANIMATION_RES := 1440
+diff --git a/rw-system.sh b/rw-system.sh
+index 2173b91..a78eea8 100644
+--- a/rw-system.sh
++++ b/rw-system.sh
+@@ -724,7 +724,7 @@ copyprop() {
+         resetprop_phh "$1" "$(getprop "$2")"
+     fi
+ }
+-if [ -f /system/phh/secure ] || [ -f /metadata/phh/secure ];then
++if [ -f /system/phh/secure ] || [ -f /metadata/phh/secure ] || true;then
+     copyprop ro.build.device ro.vendor.build.device
+     copyprop ro.system.build.fingerprint ro.vendor.build.fingerprint
+     copyprop ro.bootimage.build.fingerprint ro.vendor.build.fingerprint
+diff --git a/system.prop b/system.prop
+index a6c7ede..127b782 100644
+--- a/system.prop
++++ b/system.prop
+@@ -1,4 +1,3 @@
+-ro.adb.secure=0
+ #Some devices have sdcardfs kernel panicing on 8.0
+ #Disable for everyone for the moment
+ ro.sys.sdcardfs=0
+-- 
+2.32.0 (Apple Git-132)
+

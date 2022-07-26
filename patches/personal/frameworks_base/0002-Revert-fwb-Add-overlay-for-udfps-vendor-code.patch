@@ -1,0 +1,60 @@
+From ed8656fc9c96850ac4ad9b98ba25fee1e07f91d2 Mon Sep 17 00:00:00 2001
+From: xiaoleGun <1592501605@qq.com>
+Date: Tue, 26 Jul 2022 17:29:40 +0800
+Subject: [PATCH 2/9] Revert "fwb: Add overlay for udfps vendor code"
+
+This reverts commit 67cc32bf19977334ac27961a6a86ab00a980ac6d.
+
+Signed-off-by: xiaoleGun <1592501605@qq.com>
+---
+ packages/SystemUI/res/values/kscope_config.xml               | 3 ---
+ .../src/com/android/systemui/biometrics/UdfpsController.java | 5 +----
+ 2 files changed, 1 insertion(+), 7 deletions(-)
+
+diff --git a/packages/SystemUI/res/values/kscope_config.xml b/packages/SystemUI/res/values/kscope_config.xml
+index 7e9bdd891aae..a85ba28144e7 100644
+--- a/packages/SystemUI/res/values/kscope_config.xml
++++ b/packages/SystemUI/res/values/kscope_config.xml
+@@ -27,9 +27,6 @@
+     <!-- Udfps HBM provider class name -->
+     <string name="config_udfpsHbmProviderComponent">com.android.systemui.biometrics.DummyUdfpsHbmProvider</string>
+ 
+-    <!-- Udfps vendor code -->
+-    <integer name="config_udfpsVendorCode">0</integer>
+-
+     <!-- Allow devices override audio panel location to the left side -->
+     <bool name="config_audioPanelOnLeftSide">false</bool>
+ 
+diff --git a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsController.java b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsController.java
+index 43657c39acdd..438b12847b0d 100644
+--- a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsController.java
++++ b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsController.java
+@@ -164,7 +164,6 @@ public class UdfpsController implements DozeReceiver {
+     private Runnable mAodInterruptRunnable;
+     private boolean mOnFingerDown;
+     private boolean mAttemptedToDismissKeyguard;
+-    private final int mUdfpsVendorCode;
+     private Set<Callback> mCallbacks = new HashSet<>();
+ 
+     @VisibleForTesting
+@@ -326,7 +325,7 @@ public class UdfpsController implements DozeReceiver {
+         public void onAcquired(int sensorId, int acquiredInfo, int vendorCode) {
+             mFgExecutor.execute(() -> {
+                 if (acquiredInfo == 6 && (mStatusBarStateController.isDozing() || !mScreenOn)) {
+-                    if (vendorCode == mUdfpsVendorCode) {
++                    if (vendorCode == 22) { // Use overlay to determine pressed vendor code?
+                         mPowerManager.wakeUp(mSystemClock.uptimeMillis(),
+                                 PowerManager.WAKE_REASON_GESTURE, TAG);
+                         onAodInterrupt(0, 0, 0, 0); // To-Do pass proper values
+@@ -659,8 +658,6 @@ public class UdfpsController implements DozeReceiver {
+         context.registerReceiver(mBroadcastReceiver, filter);
+ 
+         udfpsHapticsSimulator.setUdfpsController(this);
+-
+-        mUdfpsVendorCode = mContext.getResources().getInteger(R.integer.config_udfpsVendorCode);
+     }
+ 
+     /**
+-- 
+2.32.0 (Apple Git-132)
+

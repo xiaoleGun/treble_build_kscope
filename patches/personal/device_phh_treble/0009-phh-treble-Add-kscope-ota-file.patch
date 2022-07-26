@@ -1,0 +1,26 @@
+From d2b97b92dd305ed73fcdc6b03b9b85c26f16df35 Mon Sep 17 00:00:00 2001
+From: xiaoleGun <1592501605@qq.com>
+Date: Tue, 26 Jul 2022 11:22:08 +0800
+Subject: [PATCH 9/9] phh-treble: Add kscope ota file
+
+Signed-off-by: xiaoleGun <1592501605@qq.com>
+---
+ kscope_treble.mk | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/kscope_treble.mk b/kscope_treble.mk
+index 2ce98f1..114b3b2 100644
+--- a/kscope_treble.mk
++++ b/kscope_treble.mk
+@@ -27,3 +27,7 @@ PRODUCT_CHARACTERISTICS := device
+ 
+ # Boot animation
+ TARGET_BOOT_ANIMATION_RES := 1440
++
++# OTA json
++PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
++	ro.system.ota.json_url=https://raw.githubusercontent.com/xiaoleGun/treble_build_kscope/sunflowerleaf/ota.json
+\ No newline at end of file
+-- 
+2.32.0 (Apple Git-132)
+

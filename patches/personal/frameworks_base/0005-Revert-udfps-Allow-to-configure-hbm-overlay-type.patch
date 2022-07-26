@@ -1,0 +1,59 @@
+From c1d8e8086681a73fd46b2ec5d7d2221ad5c24bd5 Mon Sep 17 00:00:00 2001
+From: xiaoleGun <1592501605@qq.com>
+Date: Tue, 26 Jul 2022 17:30:32 +0800
+Subject: [PATCH 5/9] Revert "udfps: Allow to configure hbm overlay type"
+
+This reverts commit 7ef0084a48342a54ef6bfdd7ece12e192d1fbb85.
+
+Signed-off-by: xiaoleGun <1592501605@qq.com>
+---
+ packages/SystemUI/res/values/kscope_config.xml             | 6 ------
+ .../src/com/android/systemui/biometrics/UdfpsView.java     | 7 +++----
+ 2 files changed, 3 insertions(+), 10 deletions(-)
+
+diff --git a/packages/SystemUI/res/values/kscope_config.xml b/packages/SystemUI/res/values/kscope_config.xml
+index a85ba28144e7..287643824fb9 100644
+--- a/packages/SystemUI/res/values/kscope_config.xml
++++ b/packages/SystemUI/res/values/kscope_config.xml
+@@ -18,12 +18,6 @@
+     <!-- Color of the UDFPS pressed view -->
+     <color name="config_udfpsColor">#ffffffff</color>
+ 
+-    <!-- HBM type of UDFPS overlay.
+-            0 - GLOBAL HBM
+-            1 - LOCAL HBM
+-    -->
+-    <integer name="config_udfpsHbmType">1</integer>
+-
+     <!-- Udfps HBM provider class name -->
+     <string name="config_udfpsHbmProviderComponent">com.android.systemui.biometrics.DummyUdfpsHbmProvider</string>
+ 
+diff --git a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsView.java b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsView.java
+index ee4cb15de410..6d31ef0e7701 100644
+--- a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsView.java
++++ b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsView.java
+@@ -51,6 +51,7 @@ public class UdfpsView extends FrameLayout implements DozeReceiver, UdfpsIllumin
+ 
+     private static final String SETTING_HBM_TYPE =
+             "com.android.systemui.biometrics.UdfpsSurfaceView.hbmType";
++    private static final @HbmType int DEFAULT_HBM_TYPE = UdfpsHbmTypes.LOCAL_HBM;
+ 
+     private static final int DEBUG_TEXT_SIZE_PX = 32;
+ 
+@@ -98,11 +99,9 @@ public class UdfpsView extends FrameLayout implements DozeReceiver, UdfpsIllumin
+ 
+         if (Build.IS_ENG || Build.IS_USERDEBUG) {
+             mHbmType = Settings.Secure.getIntForUser(mContext.getContentResolver(),
+-                    SETTING_HBM_TYPE,
+-                    mContext.getResources().getInteger(R.integer.config_udfpsHbmType),
+-                    UserHandle.USER_CURRENT);
++                    SETTING_HBM_TYPE, DEFAULT_HBM_TYPE, UserHandle.USER_CURRENT);
+         } else {
+-            mHbmType = mContext.getResources().getInteger(R.integer.config_udfpsHbmType);
++            mHbmType = DEFAULT_HBM_TYPE;
+         }
+     }
+ 
+-- 
+2.32.0 (Apple Git-132)
+
